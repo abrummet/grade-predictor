@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grade Predictor · Principles of Chemistry I</title>
+<style>
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --surface2:#f7f8fb; --line:#dfe3ec; --ink:#1b2232; --muted:#5d6678;
+  --accent:#3557d6; --accent-ink:#ffffff; --accent-soft:#e8edfd;
+  --whatif:#a85a00; --whatif-bg:#fff5e0; --whatif-line:#e0a445;
+  --avg:#0b6f67; --avg-bg:#e3f5f2; --avg-line:#4bb3a8;
+  --need:#6a35c9; --need-bg:#f1eafe; --need-line:#a98be6;
+  --bad:#c62828; --bad-bg:#fdecec;
+  --shadow:0 1px 2px rgba(20,30,60,.06),0 4px 14px rgba(20,30,60,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#11141b; --surface:#1a1f2a; --surface2:#202634; --line:#2e3545; --ink:#e8ebf2; --muted:#9aa4b8;
+  --accent:#86a2ff; --accent-ink:#0f1422; --accent-soft:#252f4d;
+  --whatif:#f3b85c; --whatif-bg:#36290f; --whatif-line:#8f6a25;
+  --avg:#5ad2c3; --avg-bg:#0f2f2c; --avg-line:#2c7d74;
+  --need:#bea4ff; --need-bg:#2a2146; --need-line:#6a52ab;
+  --bad:#ff8a80; --bad-bg:#3d1a1a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100dvh;display:flex;flex-direction:column}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+header{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.1px}
+header h1 span{color:var(--muted);font-weight:500}
+header .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 10px;min-height:32px}
+.btn:hover{background:var(--surface2)}
+.btn.warn{border-color:var(--bad);color:var(--bad)}
+
+main{flex:1;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:12px;padding:12px 16px;max-width:1280px;width:100%;margin:0 auto;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 8px;font-weight:650}
+
+/* segmented controls */
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:7px;padding:4px 10px;min-height:28px;color:var(--muted);white-space:nowrap}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(0,0,0,.08);font-weight:600}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.seg button.on[data-plan="avg"]{color:var(--avg);box-shadow:0 0 0 1px var(--avg-line)}
+.seg button.on[data-plan="need"]{color:var(--need);box-shadow:0 0 0 1px var(--need-line)}
+.seg button.on[data-mode="whatif"]{color:var(--whatif);box-shadow:0 0 0 1px var(--whatif-line)}
+
+/* entry pane */
+.entry.whatif-mode{border-style:dashed;border-color:var(--whatif-line)}
+.modebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.modebar .hint{color:var(--muted);font-size:12.5px;flex:1;min-width:180px}
+.tabs{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{flex:1;border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:6px 5px;font-size:13px;min-height:34px;color:var(--ink);white-space:nowrap;font-weight:550}
+.tabs button:hover{border-color:var(--accent);background:var(--accent-soft)}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
+.tabs small{font-size:10.5px;font-weight:500;margin-left:3px;opacity:.75}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:6px}
+.cell{border:1.5px solid var(--line);border-radius:10px;padding:5px 8px 6px;background:var(--surface);min-width:0}
+.cell .top{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;color:var(--muted)}
+.cell .top .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell .tag{font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+.cell .row{display:flex;align-items:baseline;gap:4px}
+.cell input{width:100%;min-width:0;border:0;background:transparent;font-size:17px;font-weight:600;padding:1px 0;height:28px;font-variant-numeric:tabular-nums}
+.cell input:focus{outline:none}
+.cell:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.cell input::placeholder{color:var(--muted);opacity:.45;font-weight:500}
+.cell .max{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.cell.earned{border-color:var(--accent);background:var(--accent-soft)}
+.cell.locked input{cursor:not-allowed}
+.cell.whatif{border-style:dashed;border-color:var(--whatif-line);background:var(--whatif-bg)}
+.cell.whatif input,.cell.whatif .tag{color:var(--whatif)}
+.cell.whatif input{font-style:italic}
+.cell.avg{border-style:dashed;border-color:var(--avg-line);background:var(--avg-bg)}
+.cell.avg .tag{color:var(--avg)} .cell.avg input::placeholder{color:var(--avg);opacity:.9;font-style:italic}
+.cell.need{border-style:dashed;border-color:var(--need-line);background:var(--need-bg)}
+.cell.need .tag{color:var(--need)} .cell.need input::placeholder{color:var(--need);opacity:.9;font-style:italic}
+.cell.invalid{border-style:solid;border-color:var(--bad);background:var(--bad-bg)}
+.cell.invalid .tag,.cell.invalid input{color:var(--bad)}
+.ecrow{display:flex;gap:6px;align-items:center;margin-top:6px}
+.ecrow input{border:1.5px solid var(--line);border-radius:9px;background:var(--surface);padding:5px 8px;height:34px;min-width:0}
+.ecrow input.nm{flex:1} .ecrow input.pt{width:80px;font-weight:600}
+.ecrow input.bad{border-color:var(--bad);background:var(--bad-bg)}
+.catsum{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px}
+.catsum .txt{flex:1;min-width:200px}
+.catsum b{font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:3px;border:1.5px solid;vertical-align:-1px;margin-right:4px}
+.legend .e{border-color:var(--accent);background:var(--accent-soft)}
+.legend .w{border:1.5px dashed var(--whatif-line);background:var(--whatif-bg)}
+.legend .a{border:1.5px dashed var(--avg-line);background:var(--avg-bg)}
+.legend .n{border:1.5px dashed var(--need-line);background:var(--need-bg)}
+
+/* results */
+.now{display:flex;align-items:center;gap:14px}
+.now .letter{width:64px;height:64px;border-radius:16px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:34px;font-weight:700;flex:none}
+.now .letter.empty{background:var(--surface2);color:var(--muted);border:1px dashed var(--line)}
+.now .big{font-size:26px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.now .sub{color:var(--muted);font-size:12.5px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface2)}
+.tile .k{font-size:11px;color:var(--muted)}
+.tile .v{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}
+.tile.proj{border-style:dashed;border-color:var(--whatif-line);background:var(--whatif-bg)}
+.tile.proj .v{color:var(--whatif)}
+.bar{position:relative;margin:26px 2px 24px;height:38px}
+.bands{position:absolute;inset:0;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.band{position:absolute;top:0;bottom:0;display:flex;align-items:flex-end;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);padding-bottom:1px;border-right:1px solid var(--surface)}
+.range{position:absolute;top:6px;height:10px;border-radius:6px;background:var(--accent);opacity:.85;min-width:3px}
+.mk{position:absolute;top:-4px;bottom:-4px;width:0;border-left:3px solid var(--ink)}
+.mk span{position:absolute;white-space:nowrap;font-size:11.5px;font-weight:650;transform:translateX(-50%);left:0}
+.mk.cur span{bottom:100%;margin-bottom:2px}
+.mk.proj{border-left:3px dashed var(--whatif)}
+.mk.proj span{top:100%;margin-top:2px;color:var(--whatif)}
+.scale{font-size:11.5px;color:var(--muted)}
+
+.plan{display:grid;grid-template-columns:auto 1fr auto;gap:5px 10px;align-items:center}
+.plan .nm{font-weight:600}
+.plan .left{color:var(--muted);font-size:12px}
+.target{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.needbox{margin-top:8px;border-radius:10px;padding:8px 10px;background:var(--need-bg);border:1px dashed var(--need-line);font-size:13.5px;min-height:44px}
+.needbox b.n{color:var(--need);font-size:17px}
+.needbox .d{color:var(--muted);font-size:12px;margin-top:2px}
+.needbox.idle{background:var(--surface2);border-color:var(--line);color:var(--muted)}
+.note{color:var(--muted);font-size:11.5px;margin:0}
+
+@media (max-width:860px){ main{grid-template-columns:1fr} header h1 span{display:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Principles of Chemistry I <span>· Grade Predictor</span></h1>
+  <div class="sp"></div>
+  <button class="btn" id="resetBtn" type="button">Reset</button>
+  <button class="btn" id="themeBtn" type="button" aria-label="Switch between light and dark mode">Dark mode</button>
+</header>
+
+<main>
+  <div class="col">
+    <section class="card entry" id="entry">
+      <div class="modebar">
+        <div class="seg" role="group" aria-label="Entry mode">
+          <button type="button" data-mode="earned">Earned scores</button>
+          <button type="button" data-mode="whatif">What-if scores</button>
+        </div>
+        <div class="hint" id="modeHint"></div>
+        <button class="btn" id="clearWhatif" type="button" hidden>Clear what-ifs</button>
+      </div>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <div id="grid"></div>
+      <div class="catsum" id="catsum"></div>
+      <div class="legend">
+        <span><i class="e"></i>Earned</span>
+        <span><i class="w"></i>What-if (you typed it)</span>
+        <span><i class="a"></i>Estimated from your average</span>
+        <span><i class="n"></i>Needed for your target</span>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card">
+      <h2>Where you stand</h2>
+      <div class="now">
+        <div class="letter" id="curLetter">–</div>
+        <div>
+          <div class="big" id="curPct">Enter your scores</div>
+          <div class="sub" id="curSub">Current grade, from earned scores only</div>
+        </div>
+      </div>
+      <div class="bar" id="bar"></div>
+      <div class="tiles">
+        <div class="tile"><div class="k">Lowest possible</div><div class="v" id="lowV">–</div></div>
+        <div class="tile proj"><div class="k">Projected</div><div class="v" id="projV">–</div></div>
+        <div class="tile"><div class="k">Highest possible</div><div class="v" id="highV">–</div></div>
+      </div>
+      <p class="note" id="projNote" style="margin-top:6px"></p>
+    </section>
+
+    <section class="card">
+      <h2>Plan the rest of the semester</h2>
+      <div class="plan" id="plan"></div>
+      <div class="target">
+        <span><b>What do I need</b> for a</span>
+        <div class="seg" id="targetSeg" role="group" aria-label="Target grade"></div>
+      </div>
+      <div class="needbox idle" id="needbox"></div>
+    </section>
+    <p class="note" id="scaleNote"></p>
+  </div>
+</main>
+
+<script>
+/* ====================================================================
+   COURSE SETUP — edit this block each semester. Students cannot change it.
+   Each item is ["name", points possible, optional group]. cap = most points a category
+   can contribute (null = no cap). minForAverage = earned scores required
+   before "My average" can be used for that category.
+   ==================================================================== */
+const COURSE = {
+  totalPoints: 1000,
+  breaks: [["A", 87.5], ["B", 77.5], ["C", 67.5], ["D", 57.5]],   // below the last break = F
+  categories: [
+    { id: "lab", name: "Labs", cap: null, minForAverage: 1,
+      groups: { cs: "Case studies", lab: "Labs" },   // items in a group are averaged only with each other
+      items: [
+      ["Safety Quiz", 2], ["CS 1", 13, "cs"], ["Lab 1", 20, "lab"], ["CS 2", 13, "cs"], ["Lab 2", 20, "lab"],
+      ["CS 3", 13, "cs"], ["Lab 3", 20, "lab"], ["CS 4", 13, "cs"], ["Lab 4", 20, "lab"], ["CS 5", 13, "cs"],
+      ["Lab 5", 20, "lab"], ["CS 6", 13, "cs"], ["Lab 6", 20, "lab"] ] },
+    { id: "disc", name: "Discussion", cap: 105, minForAverage: 1, items: [
+      ["Week 2", 8], ["Week 3", 8], ["Week 4", 8], ["Week 5", 8], ["Week 6", 8], ["Week 7", 8], ["Week 8", 8],
+      ["Week 9", 8], ["Week 10", 8], ["Week 11", 8], ["Week 12", 8], ["Week 13", 8], ["Week 14", 8], ["Week 15", 8] ] },
+    { id: "hw", name: "Homework", cap: 195, minForAverage: 1, items: [
+      ["HW 1", 16], ["HW 2", 16], ["HW 3", 16], ["HW 4", 16], ["HW 5", 16], ["HW 6", 16], ["HW 7", 16],
+      ["HW 8", 16], ["HW 9", 16], ["HW 10", 16], ["HW 11", 16], ["HW 12", 16], ["HW 13", 16] ] },
+    { id: "exam", name: "Exams", cap: null, minForAverage: 2, items: [
+      ["Exam 1", 125], ["Exam 2", 125], ["Exam 3", 125], ["Final Exam", 125] ] }
+  ],
+  extraCredit: { name: "iClicker (end of semester)", max: 10 }
+};
+/* ============================ end of setup ============================ */
+
+const KEY = "gradePredictor.chem1.v1";
+const EC = "ec-0";
+const $ = s => document.querySelector(s);
+const CATS = COURSE.categories;
+let S = { earned: {}, whatif: {}, plan: {}, target: "B", mode: "earned", tab: "lab", custom: [], theme: null };
+try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const parse = (str, max) => {
+  if (str == null || String(str).trim() === "") return { blank: true };
+  const n = Number(str);
+  if (!isFinite(n) || n < 0 || (max != null && n > max)) return { invalid: true };
+  return { v: n };
+};
+const letter = p => { for (const [l, b] of COURSE.breaks) if (p >= b) return l; return "F"; };
+const pct = p => (Math.floor(p * 10 + 1e-7) / 10).toFixed(1) + "%";          // never rounds up across a grade break
+const pts = n => String(Math.round(n * 10) / 10);
+const cap = (c, x) => c.cap == null ? x : Math.min(x, c.cap);
+const list = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+
+function compute() {
+  const R = { kinds: {}, cats: {} };
+  let sE = 0, sP = 0, sHigh = 0, sProj = 0, sProjP = 0, anyProj = false;
+  for (const c of CATS) {
+    let E = 0, P = 0, nE = 0; const pend = [], G = {};
+    c.items.forEach(([nm, max, grp], i) => {
+      const id = c.id + "-" + i, e = parse(S.earned[id], max);
+      if (e.v != null) { E += e.v; P += max; nE++; R.kinds[id] = { kind: "earned" };
+        if (grp) { G[grp] = G[grp] || { E: 0, P: 0 }; G[grp].E += e.v; G[grp].P += max; } }
+      else pend.push({ id, max, grp, bad: !!e.invalid });
+    });
+    const avgOK = nE >= c.minForAverage && P > 0, avg = avgOK ? E / P : 0;
+    let plan = S.plan[c.id] || "blank"; if (plan === "avg" && !avgOK) plan = "blank";
+    let W = 0, Wp = 0, A = 0, Ap = 0, N = 0, B = 0, rem = 0, needMax = new Set();
+    for (const it of pend) {
+      rem += it.max;
+      const w = parse(S.whatif[it.id], it.max), k = { kind: "blank", invalid: it.bad || !!w.invalid };
+      if (it.bad) B += it.max;
+      else if (w.v != null) { W += w.v; Wp += it.max; k.kind = "whatif"; }
+      else if (plan === "avg" && (!it.grp || (G[it.grp] && G[it.grp].P > 0))) {
+        const a = it.grp ? G[it.grp].E / G[it.grp].P : avg;      // grouped items use their own group's average
+        A += a * it.max; Ap += it.max; k.kind = "avg"; k.fill = a * it.max; }
+      else if (plan === "need") { N += it.max; k.kind = "need"; k.max = it.max; needMax.add(it.max); }
+      else B += it.max;
+      R.kinds[it.id] = k;
+    }
+    R.cats[c.id] = { G, E, P, nE, avgOK, avg, plan, W, A, N, B, left: pend.length, needMax, fixed: E + W + A };
+    sE += cap(c, E); sP += cap(c, P); sHigh += cap(c, E + rem);
+    sProj += cap(c, E + W + A); sProjP += cap(c, P + Wp + Ap);
+    if (Wp + Ap > 0) anyProj = true;
+  }
+  // extra credit
+  const ice = parse(S.earned[EC], COURSE.extraCredit.max), icw = parse(S.whatif[EC], COURSE.extraCredit.max);
+  let ecE = ice.v || 0, ecW = 0;
+  S.custom.forEach(r => { const p = parse(r.pts, 100); if (p.v != null) ecE += p.v; });
+  R.kinds[EC] = { kind: ice.v != null ? "earned" : "blank", invalid: !!ice.invalid };
+  if (ice.v == null && !ice.invalid) {
+    if (icw.v != null) { ecW = icw.v; R.kinds[EC].kind = "whatif"; anyProj = true; }
+    else if (icw.invalid) R.kinds[EC].invalid = true;
+  }
+  const T = COURSE.totalPoints, ecMax = ice.v != null ? 0 : COURSE.extraCredit.max;
+  R.any = sP > 0 || ecE > 0;
+  R.gradedPts = sP;
+  R.current = sP > 0 ? sE / sP * 100 + ecE / T * 100 : null;
+  R.lowest = (sE + ecE) / T * 100;
+  R.highest = (sHigh + ecE + ecMax) / T * 100;
+  R.projected = anyProj && sProjP > 0 ? sProj / sProjP * 100 + (ecE + ecW) / T * 100 : null;
+  R.projPts = sProjP;
+
+  // what do I need?
+  const needCats = CATS.filter(c => R.cats[c.id].N > 0), blankCats = CATS.filter(c => R.cats[c.id].B > 0);
+  const total = p => CATS.reduce((s, c) => s + cap(c, R.cats[c.id].fixed + p * R.cats[c.id].N), 0) + ecE + ecW;
+  const goal = COURSE.breaks.find(b => b[0] === S.target)[1] * T / 100;
+  const nd = R.need = { needCats, blankCats, status: "ok" };
+  if (!CATS.some(c => R.cats[c.id].left > 0)) nd.status = "done";
+  else if (!needCats.length) nd.status = "none";
+  else if (blankCats.length) nd.status = "incomplete";
+  else if (total(0) >= goal - 1e-9) { nd.status = "locked"; nd.p = 0; nd.at = total(0) / T * 100; }
+  else if (total(1) < goal - 1e-9) { nd.status = "unreachable"; nd.p = 1; nd.at = total(1) / T * 100; }
+  else { let lo = 0, hi = 1; for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; total(m) >= goal - 1e-9 ? hi = m : lo = m; } nd.p = hi; }
+  if (nd.p != null) for (const id in R.kinds) if (R.kinds[id].kind === "need") R.kinds[id].fill = nd.p * R.kinds[id].max;
+  return R;
+}
+
+/* ---------- rendering ---------- */
+function planSeg(c, r) {
+  const b = (v, t, dis) => `<button type="button" data-plan="${v}" data-cat="${c.id}" class="${r.plan === v ? "on" : ""}" ${dis ? "disabled" : ""}>${t}</button>`;
+  return `<div class="seg" role="group" aria-label="${c.name}: remaining work">${b("blank", "Leave blank", !r.left)}${b("avg", "My average", !r.left || !r.avgOK)}${b("need", "Need", !r.left)}</div>`;
+}
+
+function renderTabs(R) {
+  $("#tabs").innerHTML = CATS.map(c =>
+    `<button type="button" role="tab" data-tab="${c.id}" class="${S.tab === c.id ? "on" : ""}">${c.name}<small>${R.cats[c.id].nE}/${c.items.length}</small></button>`
+  ).join("") + `<button type="button" role="tab" data-tab="ec" class="${S.tab === "ec" ? "on" : ""}">Extra credit</button>`;
+}
+
+function cellHTML(id, name, max) {
+  return `<div class="cell" data-id="${id}"><div class="top"><span class="nm">${name}</span><span class="tag"></span></div>
+    <div class="row"><input inputmode="decimal" autocomplete="off" aria-label="${name}, out of ${max}"><span class="max">/ ${max}</span></div></div>`;
+}
+
+function renderGrid() {
+  const g = $("#grid");
+  if (S.tab === "ec") {
+    g.innerHTML = `<div class="grid" style="grid-template-columns:minmax(0,260px)">${cellHTML(EC, COURSE.extraCredit.name, COURSE.extraCredit.max)}</div><div id="ecrows"></div>
+      <button class="btn" type="button" id="addEc" style="margin-top:8px">+ Add other extra credit</button>`;
+    const box = $("#ecrows");
+    S.custom.forEach((r, i) => {
+      const d = document.createElement("div"); d.className = "ecrow";
+      d.innerHTML = `<input class="nm" placeholder="Description" aria-label="Extra credit description"><input class="pt" inputmode="decimal" placeholder="Points" aria-label="Extra credit points earned"><button class="btn" type="button" aria-label="Remove">✕</button>`;
+      const [nm, pt, rm] = d.children;
+      nm.value = r.name || ""; pt.value = r.pts || "";
+      nm.oninput = () => { r.name = nm.value; save(); };
+      pt.oninput = () => { r.pts = pt.value; save(); refresh(); pt.classList.toggle("bad", !!parse(r.pts, 100).invalid); };
+      pt.classList.toggle("bad", !!parse(r.pts, 100).invalid);
+      rm.onclick = () => { S.custom.splice(i, 1); save(); renderGrid(); refresh(); };
+      box.appendChild(d);
+    });
+    $("#addEc").onclick = () => { if (S.custom.length < 6) { S.custom.push({ name: "", pts: "" }); save(); renderGrid(); refresh(); } };
+  } else {
+    const c = CATS.find(c => c.id === S.tab);
+    g.innerHTML = `<div class="grid">${c.items.map(([n, m], i) => cellHTML(c.id + "-" + i, n, m)).join("")}</div>`;
+  }
+  g.querySelectorAll(".cell").forEach(el => {
+    const id = el.dataset.id, inp = el.querySelector("input");
+    const hasE = S.earned[id] != null && S.earned[id] !== "";
+    inp.value = hasE ? S.earned[id] : (S.whatif[id] || "");
+    inp.readOnly = S.mode === "whatif" && hasE;
+  });
+}
+
+function refresh() {
+  const R = compute();
+  renderTabs(R);
+  // cells
+  document.querySelectorAll("#grid .cell").forEach(el => {
+    const k = R.kinds[el.dataset.id], inp = el.querySelector("input"), tag = el.querySelector(".tag");
+    el.className = "cell " + (k.invalid ? "invalid" : k.kind) + (inp.readOnly ? " locked" : "");
+    tag.textContent = k.invalid ? "check score" : { earned: inp.readOnly ? "earned 🔒" : "earned", whatif: "what-if", avg: "average", need: "need", blank: "" }[k.kind];
+    inp.placeholder = (k.kind === "avg" || k.kind === "need") ? (k.fill != null ? pts(k.fill) : "?") : "–";
+  });
+  // entry pane chrome
+  $("#entry").classList.toggle("whatif-mode", S.mode === "whatif");
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === S.mode));
+  $("#modeHint").textContent = S.mode === "earned"
+    ? "Enter scores you have actually received. Leave ungraded items blank; enter 0 for missed work."
+    : "Type hypothetical scores into blank items to see their effect. Earned scores are locked.";
+  $("#clearWhatif").hidden = !Object.keys(S.whatif).length;
+  // category summary
+  const cs = $("#catsum");
+  if (S.tab === "ec") cs.innerHTML = `<div class="txt">Extra credit is added on top of the ${COURSE.totalPoints} course points and only counts once you enter it.</div>`;
+  else {
+    const c = CATS.find(c => c.id === S.tab), r = R.cats[c.id];
+    let t = r.P ? `Earned <b>${pts(r.E)} / ${pts(r.P)}</b> pts (${pct(r.E / r.P * 100)})` : "No earned scores yet";
+    if (c.groups) for (const g in c.groups) t += ` · ${c.groups[g]} average: ` + (r.G[g] ? `<b>${pct(r.G[g].E / r.G[g].P * 100)}</b>` : "none yet");
+    if (c.cap != null) t += r.E >= c.cap ? ` · <b>Maximum of ${c.cap} reached</b>` : ` · counts up to ${c.cap} pts`;
+    if (!r.avgOK && r.left) t += ` · “My average” unlocks after ${c.minForAverage} earned score${c.minForAverage > 1 ? "s" : ""}`;
+    cs.innerHTML = `<div class="txt">${t}</div>${planSeg(c, r)}`;
+  }
+  // headline
+  const L = $("#curLetter");
+  if (R.current == null) { L.textContent = "–"; L.className = "letter empty"; $("#curPct").textContent = "Enter your scores"; $("#curSub").textContent = "Your current grade will appear here."; }
+  else { L.textContent = letter(R.current); L.className = "letter"; $("#curPct").textContent = pct(R.current);
+    $("#curSub").textContent = `Current grade, from earned scores only (${pts(R.gradedPts)} of ${COURSE.totalPoints} points graded)`; }
+  const lv = p => `${letter(p)} · ${pct(p)}`;
+  $("#lowV").textContent = R.any ? lv(R.lowest) : "–";
+  $("#highV").textContent = lv(R.highest);
+  $("#projV").textContent = R.projected != null ? lv(R.projected) : "–";
+  $("#projNote").textContent = R.projected != null
+    ? `Projected = earned + what-if + average estimates (${pts(R.projPts)} of ${COURSE.totalPoints} points filled in). Items still blank are left out.`
+    : "Add what-if scores or choose “My average” below to see a projected grade.";
+  // bar
+  const MAX = 102, pos = x => Math.max(0, Math.min(x, MAX)) / MAX * 100;
+  const edges = [0, ...COURSE.breaks.map(b => b[1]).reverse(), MAX], names = ["F", ...COURSE.breaks.map(b => b[0]).reverse()];
+  const mix = [5, 11, 18, 26, 36];
+  let h = `<div class="bands">` + names.map((n, i) => `<div class="band" style="left:${pos(edges[i])}%;width:${pos(edges[i + 1]) - pos(edges[i])}%;background:color-mix(in srgb,var(--accent) ${mix[Math.min(i, 4)]}%,var(--surface))">${n}</div>`).join("") + `</div>`;
+  h += `<div class="range" style="left:${pos(R.lowest)}%;width:${pos(R.highest) - pos(R.lowest)}%" title="Lowest to highest possible"></div>`;
+  const mk = (cls, x, t) => { const p = pos(x), sh = p < 12 ? "transform:translateX(-10%)" : p > 88 ? "transform:translateX(-90%)" : ""; return `<div class="mk ${cls}" style="left:calc(${p}% - 1.5px)"><span style="${sh}">${t} ${pct(x)}</span></div>`; };
+  if (R.current != null) h += mk("cur", R.current, "Current");
+  if (R.projected != null) h += mk("proj", R.projected, "Projected");
+  $("#bar").innerHTML = h;
+  // plan
+  $("#plan").innerHTML = CATS.map(c => { const r = R.cats[c.id];
+    return `<span class="nm">${c.name}</span><span class="left">${r.left ? r.left + " left" : "complete"}${r.left && !r.avgOK && c.minForAverage > 1 ? ` · average needs ${c.minForAverage} scores` : ""}</span>${planSeg(c, r)}`; }).join("");
+  $("#targetSeg").innerHTML = COURSE.breaks.map(([l]) => `<button type="button" data-target="${l}" class="${S.target === l ? "on" : ""}">${l}</button>`).join("");
+  // need box
+  const nd = R.need, nb = $("#needbox"), t = S.target, art = t === "A" ? "an" : "a";
+  const nn = list(nd.needCats.map(c => c.name));
+  nb.className = "needbox" + (["none", "incomplete", "done"].includes(nd.status) ? " idle" : "");
+  if (nd.status === "done") nb.textContent = "Every score is entered, so there is nothing left to solve for.";
+  else if (nd.status === "none") nb.innerHTML = `Choose <b>Need</b> for one or more categories above to see the average you need on them. Use what-if scores or <b>My average</b> for the rest.`;
+  else if (nd.status === "incomplete") nb.innerHTML = `Almost there: <b>${list(nd.blankCats.map(c => c.name))}</b> still ${nd.blankCats.length > 1 ? "have" : "has"} blank items. Choose <b>My average</b> or <b>Need</b> for ${nd.blankCats.length > 1 ? "them" : "it"}, or add what-if scores.`;
+  else if (nd.status === "locked") nb.innerHTML = `With this plan you have already secured at least ${art} <b>${t}</b>: zeros on the remaining ${nn} would still leave you at ${pct(nd.at)}.`;
+  else if (nd.status === "unreachable") nb.innerHTML = `With this plan ${art} <b>${t}</b> is out of reach: 100% on the remaining ${nn} gets you to ${pct(nd.at)} (${letter(nd.at)}).`;
+  else {
+    const need = Math.ceil(nd.p * 1000 - 1e-6) / 10;
+    const det = nd.needCats.map(c => { const r = R.cats[c.id], m = [...r.needMax];
+      const n = Object.keys(R.kinds).filter(id => id.startsWith(c.id + "-") && R.kinds[id].kind === "need").length;
+      return `${c.name}: ${n} left` + (m.length === 1 ? `, about ${pts(nd.p * m[0])} of ${m[0]} each` : ""); }).join(" · ");
+    nb.innerHTML = `For ${art} <b>${t}</b>, average <b class="n">${need.toFixed(1)}%</b> on the remaining ${nn}.<div class="d">${det}</div>`;
+  }
+  $("#scaleNote").textContent = "Grading scale: " + COURSE.breaks.map(([l, b]) => `${l} ≥ ${b}%`).join(" · ") +
+    ". Only whole letter grades are shown; +/− grades are specified in the syllabus. Scores are saved in this browser only.";
+}
+
+/* ---------- events ---------- */
+$("#grid").addEventListener("input", e => {
+  const el = e.target.closest(".cell"); if (!el) return;
+  const id = el.dataset.id, v = e.target.value.trim();
+  if (S.mode === "earned") { delete S.whatif[id]; v === "" ? delete S.earned[id] : S.earned[id] = v; }
+  else if (!e.target.readOnly) { v === "" ? delete S.whatif[id] : S.whatif[id] = v; }
+  save(); refresh();
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const d = b.dataset;
+  if (d.tab) { S.tab = d.tab; renderGrid(); }
+  else if (d.mode) { S.mode = d.mode; renderGrid(); }
+  else if (d.plan) S.plan[d.cat] = d.plan;
+  else if (d.target) S.target = d.target;
+  else return;
+  save(); refresh();
+});
+$("#clearWhatif").onclick = () => { S.whatif = {}; save(); renderGrid(); refresh(); };
+let armed = null;
+$("#resetBtn").onclick = function () {
+  if (!armed) { this.textContent = "Erase everything?"; this.classList.add("warn"); armed = setTimeout(() => { armed = null; this.textContent = "Reset"; this.classList.remove("warn"); }, 3500); return; }
+  clearTimeout(armed); armed = null; this.textContent = "Reset"; this.classList.remove("warn");
+  S = { earned: {}, whatif: {}, plan: {}, target: "B", mode: "earned", tab: S.tab, custom: [], theme: S.theme };
+  save(); renderGrid(); refresh();
+};
+function applyTheme() {
+  const dark = S.theme ? S.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  $("#themeBtn").textContent = dark ? "Light mode" : "Dark mode";
+}
+$("#themeBtn").onclick = () => { S.theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; save(); applyTheme(); };
+
+if (!CATS.some(c => c.id === S.tab) && S.tab !== "ec") S.tab = CATS[0].id;
+applyTheme(); renderGrid(); refresh();
+</script>
+</body>
+</html>
